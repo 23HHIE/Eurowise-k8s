@@ -1,181 +1,121 @@
-# Eurowise — Expenditure Tracker on Kubernetes
+# Eurowise — Personal Finance Tracker
 
-A full-stack personal finance application deployed on Kubernetes, built as an SRE portfolio project.
-
-Users can log in to track their expenses with full CRUD support, view real-time currency exchange rates, and browse the latest financial news — all backed by a production-grade K8s setup with monitoring.
+A personal project I built to learn Kubernetes. The app itself is a finance tracker where users can log in, manage their expenses, check currency exchange rates, and read the latest financial news. The main goal was to take an existing Docker Compose setup and figure out how to run it properly on Kubernetes with real monitoring.
 
 ---
 
-## Architecture
+## What the app does
+
+- User registration and login with JWT authentication
+- Add, edit, and delete personal expense records
+- Live currency exchange rates
+- Financial news feed
+
+**Stack:** React + Spring Boot (Java 17) + MySQL 8.0
+
+---
+
+## Why Kubernetes
+
+The app originally ran with `docker-compose up`. I wanted to understand what it actually takes to run something on K8s — not just apply a few YAML files, but think about how different components should be deployed, how to handle config and secrets properly, how to set up health checks, and how to get some visibility into what's running.
+
+---
+
+## What I set up
 
 ```
-                        ┌─────────────────────────────────────────┐
-                        │           Kubernetes Cluster             │
-                        │                                          │
-  Browser               │  ┌──────────┐    ┌──────────────────┐  │
-    │                   │  │  Ingress │    │   Namespace:      │  │
-    │ eurowise.local     │  │  (nginx) │    │   monitoring      │  │
-    └──────────────────►│  │          │    │                  │  │
-                        │  │ /        │    │  ┌────────────┐  │  │
-                        │  │ /api/*   │    │  │ Prometheus │  │  │
-                        │  └────┬─────┘    │  └─────┬──────┘  │  │
-                        │       │          │        │          │  │
-                        │  ┌────▼──────┐  │  ┌─────▼──────┐  │  │
-                        │  │ Frontend  │  │  │  Grafana   │  │  │
-                        │  │  (React)  │  │  └────────────┘  │  │
-                        │  └───────────┘  └──────────────────┘  │
-                        │                                          │
-                        │  ┌────────────┐   ┌─────────────────┐  │
-                        │  │  Backend   │──►│  MySQL          │  │
-                        │  │ (Spring    │   │  StatefulSet    │  │
-                        │  │  Boot)     │   │  + PVC          │  │
-                        │  └────────────┘   └─────────────────┘  │
-                        └─────────────────────────────────────────┘
+                   ┌─────────────────────────────────────────┐
+                   │           Kubernetes Cluster             │
+                   │                                          │
+ Browser           │  ┌──────────┐    ┌──────────────────┐  │
+   │               │  │  Ingress │    │   monitoring      │  │
+   │ eurowise.local│  │  (nginx) │    │                  │  │
+   └──────────────►│  │ /        │    │  ┌────────────┐  │  │
+                   │  │ /api/*   │    │  │ Prometheus │  │  │
+                   │  └────┬─────┘    │  └─────┬──────┘  │  │
+                   │       │          │        │          │  │
+                   │  ┌────▼──────┐  │  ┌─────▼──────┐  │  │
+                   │  │ Frontend  │  │  │  Grafana   │  │  │
+                   │  │  React    │  │  └────────────┘  │  │
+                   │  └───────────┘  └──────────────────┘  │
+                   │  ┌────────────┐   ┌─────────────────┐  │
+                   │  │  Backend   │──►│  MySQL          │  │
+                   │  │ Spring Boot│   │  StatefulSet    │  │
+                   │  └────────────┘   └─────────────────┘  │
+                   └─────────────────────────────────────────┘
 ```
 
-### Tech Stack
+**Namespaces:** `eurowise` (app) and `monitoring` (Prometheus + Grafana)
 
-| Layer | Technology |
-|---|---|
-| Frontend | React, Nginx |
-| Backend | Spring Boot 3 (Java 17), REST API |
-| Database | MySQL 8.0 |
-| Auth | JWT + Spring Security |
-| External APIs | Currency Exchange API, Financial News API |
-| Container Runtime | Docker |
-| Orchestration | Kubernetes (Docker Desktop) |
-| Ingress | nginx ingress controller |
-| Monitoring | Prometheus + Grafana |
+**MySQL** runs as a `StatefulSet` so it gets a stable identity (`mysql-0`) and its data persists through restarts via a `PersistentVolumeClaim`. I learned that using a regular `Deployment` for a database is a bad idea — if the pod restarts with a different name, things break.
 
----
+**Backend and Frontend** run as `Deployments` with rolling updates configured so there's no downtime during redeploys (`maxUnavailable: 0`). Both have liveness and readiness probes — the backend uses Spring Boot Actuator's `/actuator/health` endpoint.
 
-## Kubernetes Setup
+**HPA** is set up for both backend and frontend, scaling from 1 to 3 replicas when CPU goes above 70%. This required installing `metrics-server` separately since Docker Desktop doesn't include it.
 
-### Namespace Structure
+**Ingress** routes all traffic through a single nginx controller — `/api/*` goes to the backend, everything else goes to the frontend.
 
-| Namespace | Contents |
-|---|---|
-| `eurowise` | Frontend, Backend, MySQL |
-| `monitoring` | Prometheus, Grafana |
+**Monitoring** — Prometheus scrapes JVM and HTTP metrics from the backend every 15 seconds via `/actuator/prometheus`. Grafana is pre-configured with Prometheus as a datasource through a ConfigMap so there's no manual setup needed after deploy.
 
-### Resources per Component
+<!-- Grafana JVM dashboard screenshot -->
 
-**MySQL**
-- `StatefulSet` — stable Pod identity (`mysql-0`), guaranteed restart behaviour
-- `PersistentVolumeClaim` — data survives Pod restarts (via `volumeClaimTemplates`)
-- `Secret` — database credentials
-- `Service` (Headless) — stable DNS for StatefulSet
-
-**Backend**
-- `Deployment` with rolling update (`maxUnavailable: 0`, `maxSurge: 1`)
-- `liveness` + `readiness` probes on `/actuator/health`
-- `HorizontalPodAutoscaler` — scales 1→3 replicas at 70% CPU
-- Prometheus annotations for automatic scraping of `/actuator/prometheus`
-- `ConfigMap` for non-sensitive config, `Secret` for DB password
-
-**Frontend**
-- `Deployment` with rolling update
-- `liveness` + `readiness` probes
-- `HorizontalPodAutoscaler` — scales 1→3 replicas at 70% CPU
-
-**Ingress**
-- Single entry point on port 80
-- `/api/*` → Backend (with path rewrite)
-- `/*` → Frontend
-
-**Monitoring**
-- Prometheus scrapes backend JVM + HTTP metrics every 15s
-- Grafana auto-provisions Prometheus as default datasource via ConfigMap
+<!-- Grafana Kubernetes overview screenshot -->
 
 ---
 
-## Monitoring
+## Things I ran into
 
-Grafana dashboards:
+**Java version mismatch** — the pom.xml said Java 21 but the Spring Boot 3.0.0-M4 Maven plugin doesn't support it. Spent a while figuring out why the Docker build kept failing with `Unsupported class file major version 65`. Fixed by keeping the Dockerfile on Java 17.
 
-| Dashboard | ID | Metrics |
-|---|---|---|
-| JVM Micrometer | 4701 | Heap/Non-heap memory, GC pause, Threads |
-| Kubernetes Cluster | 6417 | Node CPU, Memory, Pod count |
+**Ingress controller not scheduling** — the nginx ingress cloud manifest requires a node label `ingress-ready=true` that Docker Desktop doesn't add automatically. The pod sat in `Pending` with a node affinity error until I figured that out.
 
-<!-- Add Grafana screenshots here -->
+**Port 80 conflict** — after getting ingress working, requests still returned an empty response. Eventually found that a `frontend-service` LoadBalancer from an older deployment in the `default` namespace was already holding port 80, so the ingress controller couldn't bind to it.
+
+**Everything disappears on restart** — Docker Desktop's built-in Kubernetes doesn't persist resources across restarts. Wrote `deploy.sh` to bring the whole stack back up in one command.
 
 ---
 
-## Quick Start
+## Running it locally
 
-### Prerequisites
-
-- Docker Desktop with Kubernetes enabled
-- `kubectl` configured
-
-### 1. Build Images
+**Requirements:** Docker Desktop with Kubernetes enabled
 
 ```bash
-# Backend
+# Build images
 cd Backend/Eurowise-rest-api-code
 docker build -f Dockerfile.multistage -t eurowise-backend:latest .
 
-# Frontend
 cd Frontend/Expends/expenditure-app
 docker build -t eurowise-frontend:latest .
-```
 
-### 2. Deploy
-
-```bash
+# Deploy everything
+cd /path/to/eurowise
 ./deploy.sh
-```
 
-The script installs metrics-server, nginx ingress controller, and deploys all services in the correct order.
-
-### 3. Add hosts entry
-
-```bash
+# Add to /etc/hosts
 echo "127.0.0.1 eurowise.local" | sudo tee -a /etc/hosts
 ```
 
-### 4. Access
-
 | Service | URL |
 |---|---|
-| Application | http://eurowise.local |
+| App | http://eurowise.local |
 | Prometheus | http://localhost:9090 |
-| Grafana | http://localhost:3000 |
+| Grafana | http://localhost:3000 (admin / admin123) |
 
 ---
 
-## Project Structure
+## Structure
 
 ```
-├── Backend/
-│   └── Eurowise-rest-api-code/     # Spring Boot REST API
-├── Frontend/
-│   └── Expends/expenditure-app/    # React app
+├── Backend/Eurowise-rest-api-code/   # Spring Boot API
+├── Frontend/Expends/expenditure-app/ # React app
 ├── k8s/
 │   ├── namespace.yaml
-│   ├── mysql/                      # StatefulSet, Secret, Service
-│   ├── backend/                    # Deployment, ConfigMap, HPA
-│   ├── frontend/                   # Deployment, HPA
-│   ├── ingress/                    # nginx Ingress rules
+│   ├── mysql/          # StatefulSet + Secret + Headless Service
+│   ├── backend/        # Deployment + ConfigMap + HPA
+│   ├── frontend/       # Deployment + HPA
+│   ├── ingress/        # nginx routing rules
 │   └── monitoring/
-│       ├── prometheus/             # Deployment, ConfigMap (scrape config)
-│       └── grafana/                # Deployment, ConfigMap (datasource)
-├── deploy.sh                       # One-command full deployment
-└── docs/
-    └── superpowers/
-        ├── specs/                  # Architecture design doc
-        └── plans/                  # Implementation plan
+│       ├── prometheus/ # Deployment + scrape config
+│       └── grafana/    # Deployment + datasource provisioning
+└── deploy.sh           # Full stack deployment script
 ```
-
----
-
-## SRE Highlights
-
-- **Zero-downtime deployments** — rolling update strategy with `maxUnavailable: 0`
-- **Auto-scaling** — HPA scales backend and frontend based on CPU utilisation
-- **Health checks** — liveness and readiness probes prevent traffic to unhealthy pods
-- **Stateful data management** — MySQL on StatefulSet with persistent storage
-- **Config/secret separation** — ConfigMaps for app config, Secrets for credentials
-- **Observability** — Prometheus metrics + Grafana dashboards out of the box
-- **Single ingress entry point** — path-based routing, cloud-ready for TLS termination
