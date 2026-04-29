@@ -57,9 +57,7 @@ The app originally ran with `docker-compose up`. I wanted to understand what it 
 
 **Monitoring** — Prometheus scrapes JVM and HTTP metrics from the backend every 15 seconds via `/actuator/prometheus`. Grafana is pre-configured with Prometheus as a datasource through a ConfigMap so there's no manual setup needed after deploy.
 
-<!-- Grafana JVM dashboard screenshot -->
-
-<!-- Grafana Kubernetes overview screenshot -->
+*(Grafana screenshots — add after first run)*
 
 ---
 
@@ -80,26 +78,26 @@ The app originally ran with `docker-compose up`. I wanted to understand what it 
 **Requirements:** Docker Desktop with Kubernetes enabled
 
 ```bash
-# Build images
+# 1. Add hosts entry (one-time setup)
+echo "127.0.0.1 eurowise.local" | sudo tee -a /etc/hosts
+
+# 2. Build images
 cd Backend/Eurowise-rest-api-code
 docker build -f Dockerfile.multistage -t eurowise-backend:latest .
 
 cd Frontend/Expends/expenditure-app
 docker build -t eurowise-frontend:latest .
 
-# Deploy everything
-cd /path/to/eurowise
+# 3. Deploy everything
+cd eurowise
 ./deploy.sh
-
-# Add to /etc/hosts
-echo "127.0.0.1 eurowise.local" | sudo tee -a /etc/hosts
 ```
 
 | Service | URL |
 |---|---|
 | App | http://eurowise.local |
 | Prometheus | http://localhost:9090 |
-| Grafana | http://localhost:3000 (admin / admin123) |
+| Grafana | http://localhost:3000 (credentials in `k8s/monitoring/grafana/deployment.yaml`) |
 
 ---
 

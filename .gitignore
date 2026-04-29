@@ -1,4 +1,13 @@
+# Java build output
 Backend/Eurowise-rest-api-code/target/
+
+# Node dependencies and build
 Frontend/Expends/expenditure-app/node_modules/
 Frontend/Expends/expenditure-app/build/
+
+# macOS
 **/.DS_Store
+
+# IDE
+**/.idea/
+**/*.iml
