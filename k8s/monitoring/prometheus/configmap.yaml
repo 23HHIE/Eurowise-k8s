@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: monitoring
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+
+    scrape_configs:
+      - job_name: 'eurowise-backend'
+        metrics_path: '/actuator/prometheus'
+        static_configs:
+          - targets:
+              - 'backend-service.eurowise.svc.cluster.local:8080'
