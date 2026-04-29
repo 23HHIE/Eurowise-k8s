@@ -11,3 +11,6 @@ Frontend/Expends/expenditure-app/build/
 # IDE
 **/.idea/
 **/*.iml
+
+# Local docs (personal notes)
+docs/
