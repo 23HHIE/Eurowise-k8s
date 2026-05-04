@@ -38,7 +38,7 @@ stages:
         containerRegistry: acr-connection
         repository: eurowise-frontend
         command: buildAndPush
-        Dockerfile: Frontend/expends/expenditure-app/Dockerfile
+        Dockerfile: Frontend/Expends/expenditure-app/Dockerfile
         buildContext: Frontend/Expends/expenditure-app
         tags: |
           $(Build.BuildId)
