@@ -58,6 +58,7 @@ stages:
         azureSubscriptionConnection: azure-connection
         azureResourceGroup: $(aksResourceGroup)
         kubernetesCluster: $(aksClusterName)
+        namespace: eurowise
         manifests: |
           k8s/backend/deployment.yaml
           k8s/frontend/deployment.yaml    
