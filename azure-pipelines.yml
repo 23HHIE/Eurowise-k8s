@@ -23,11 +23,11 @@ stages:
     - task: Docker@2
       displayName: Build and Push backend
       inputs:
-        containerResgistry: acr-connection
+        containerRegistry: acr-connection
         repository: eurowise-backend
         command: buildAndPush
         Dockerfile: '$(Build.SourcesDirectory)/Backend/Eurowise-rest-api-code/Dockerfile.multistage'
-        buildContext: Backend/Eurowise-rest-api-code
+        buildContext: $(Build.SourcesDirectory)/Backend/Eurowise-rest-api-code
         tags: |
           $(Build.BuildId)
           latest
