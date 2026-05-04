@@ -1,0 +1,144 @@
+label,
+input,
+button {
+    margin: 10px;
+    padding: 10px;
+}
+
+.parent-element {
+    display: flex;
+    justify-content: center;
+
+
+}
+
+
+body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    margin: 0;
+}
+
+main {
+    flex: 1;
+}
+
+.custom-navbar {
+    background-color: #757575;
+    height: 50px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: flex-end;
+
+}
+
+.custom-navbar .nav-link {
+    color: #fff;
+    font-size: 20px;
+    padding: 10px;
+}
+
+.custom-navbar .nav-link:hover {
+    color: #3498DB;
+}
+
+.WelcomeComponent {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 20px;
+    height: 60vh;
+}
+
+.search-bar-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 40px;
+}
+
+.FormGroupLabel {
+    font-size: 18px !important;
+}
+
+.FormGroup {
+    margin-bottom: 6px;
+}
+
+.news-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.news-card {
+    width: 300px;
+    margin: 10px;
+    padding: 10px;
+    border: 1px solid #ddd;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.read-more-btn {
+    margin-top: 10px;
+    background-color: #007bff;
+    color: #fff;
+}
+
+
+.wel-button {
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(to right, #c5c1bf, #95785b);
+    transition: background 0.3s ease-in-out;
+}
+
+
+.table-borderless,
+.table-borderless th,
+.table-borderless td {
+    border: none !important;
+}
+
+.footer {
+
+    width: 100%;
+    padding: 20px;
+    text-align: center;
+    background-color: #757575;
+    color: #fff;
+    min-height: 3vh;
+    margin-top: 5px;
+
+}
+
+
+
+.footer .col-md-6 h2 {
+    font-size: 18px;
+    font-weight: 100;
+    margin-bottom: 10px;
+}
+
+.footer .col-md-6 p {
+    font-size: 14px;
+    margin: 0;
+}
+
+.social-logo {
+    padding: 5px;
+    margin-bottom: 50px;
+}
+
+.footer img {
+    background-color: #757575;
+    padding: 10px;
+    border-radius: 50%;
+    opacity: 0.8;
+    width: 45px;
+    height: 45px;
+}
