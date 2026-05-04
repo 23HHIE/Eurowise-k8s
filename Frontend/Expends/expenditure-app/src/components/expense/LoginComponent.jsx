@@ -47,7 +47,7 @@ function LoginComponent() {
     >
       <Row className="justify-content-center mt-5">
         <Col xs={12} md={6}>
-          <h2 className="text-center mb-4">Hey, Time to Login!</h2>
+          <h2 className="text-center mb-4">Welcome, Time to Login!</h2>
           {/* Rendering error message */}
           {showErrorMessage && (
             <Alert variant="danger" className="text-center">
