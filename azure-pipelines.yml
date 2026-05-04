@@ -7,7 +7,7 @@ trigger:
 - main
 
 pool:
-  vmImage: ubuntu-latest
+  name: Default
 
 variables:
   acrName: eurowiseacr
@@ -50,7 +50,7 @@ stages:
   jobs:
   - job: Deploy
     steps:
-    - task: KubernetesManifest@v1
+    - task: KubernetesManifest@1
       displayName: Deploy to AKS
       inputs:
         action: deploy
