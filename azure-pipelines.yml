@@ -26,7 +26,7 @@ stages:
         containerResgistry: acr-connection
         repository: eurowise-backend
         command: buildAndPush
-        Dockerfile: '$(Build.SourcesDirectory)Backend/Eurowise-rest-api-code/Dockerfile.multistage'
+        Dockerfile: '$(Build.SourcesDirectory)/Backend/Eurowise-rest-api-code/Dockerfile.multistage'
         buildContext: Backend/Eurowise-rest-api-code
         tags: |
           $(Build.BuildId)
