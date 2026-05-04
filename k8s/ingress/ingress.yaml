@@ -5,8 +5,13 @@ metadata:
   namespace: eurowise
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /$2
+    cert-manager.io/cluster-issuer: letsencrypt-prod # 告诉cert-manager使用之前定义的ClusterIssuer来管理这个Ingress的TLS证书
 spec:
   ingressClassName: nginx
+  tls:
+    - hosts:
+        - eurowise.online
+      secretName: eurowise-tls # 指定哪个domain name用TLS证书保护，以及存储TLS证书的Secret名称
   rules:
     - host: eurowise.online
       http:

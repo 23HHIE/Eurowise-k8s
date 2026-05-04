@@ -24,8 +24,8 @@ spec:
     spec:
       containers:
         - name: backend
-          image: eurowise-backend:latest
-          imagePullPolicy: Never
+          image: eurowiseacr.azurecr.io/eurowise-backend:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 8080
           envFrom:
