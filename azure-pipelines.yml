@@ -11,8 +11,8 @@ pool:
 
 variables:
   acrName: eurowiseacr
-  askResourceGroup: expense-rg
-  askClusterName: eurowise-aks
+  aksResourceGroup: expense-rg
+  aksClusterName: eurowise-aks
 
 stages:
 - stage: Build
