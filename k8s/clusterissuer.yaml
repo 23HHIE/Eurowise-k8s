@@ -1,0 +1,14 @@
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer # 集群级别的证书颁发者，所有的nampspace都可以使用
+metadata:
+  name: letsencrypt-prod
+spec:
+  acme: # let's encrypt的ACME协议配置
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: huihuanglala@outlook.com # 用于注册ACME账户的邮箱地址
+    privateKeySecretRef:
+      name: letsencrypt-prod
+    solvers:
+      - http01: # 通过HTTP-01挑战来验证域名所有权
+          ingress:
+            ingressClassName: nginx

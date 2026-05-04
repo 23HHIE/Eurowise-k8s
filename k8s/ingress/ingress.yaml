@@ -8,7 +8,7 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-    - host: eurowise.local
+    - host: eurowise.online
       http:
         paths:
           - path: /api(/|$)(.*)

@@ -20,8 +20,8 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: eurowise-frontend:latest
-          imagePullPolicy: Never
+          image: eurowiseacr.azurecr.io/eurowise-frontend:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 80
           livenessProbe:
