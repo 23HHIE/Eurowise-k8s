@@ -61,7 +61,7 @@ stages:
         namespace: eurowise
         containers: |
           eurowiseacr.azurecr.io/eurowise-backend:$(Build.BuildId)
-          eurowiseacr.azurecr.io/eurowise-frontend:$(BUild.BuildId)
+          eurowiseacr.azurecr.io/eurowise-frontend:$(Build.BuildId)
         manifests: |
           k8s/backend/deployment.yaml
           k8s/frontend/deployment.yaml    
