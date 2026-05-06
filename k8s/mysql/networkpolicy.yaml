@@ -1,0 +1,19 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: mysql-network-policy
+  namespace: eurowise
+spec:
+  podSelector: # 这个策略应用到哪些pod上，这里是mysql的pod
+    matchLabels:
+      app: mysql
+  policyTypes: # 只控制进入流量，不管出去的
+    - Ingress
+  ingress: # 只允许带app=backend标签的pod访问mysql的3306端口
+    - from:
+        - podSelector:
+            matchLabels:
+              app: backend
+      ports:
+        - protocol: TCP
+          port: 3306
