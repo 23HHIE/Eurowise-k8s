@@ -64,6 +64,7 @@ Azure DevOps Pipeline
 | Ingress            | nginx ingress controller                                |
 | Secret Management  | Azure Key Vault + CSI driver + Workload Identity        |
 | Monitoring         | Prometheus + Grafana (JVM Micrometer dashboard)         |
+| Alerting           | Prometheus AlertManager + Slack webhook                 |
 | Network Security   | NetworkPolicy (MySQL access restricted to backend only) |
 
 ---
@@ -88,6 +89,8 @@ Azure DevOps Pipeline
 
 **Monitoring** — Prometheus scrapes JVM and HTTP metrics from the Spring Boot backend every 15 seconds via `/actuator/prometheus` (exposed through Micrometer). Grafana is pre-configured with Prometheus as a datasource via ConfigMap provisioning, with a JVM Micrometer dashboard (ID 4701) for visualising heap memory, GC activity, and thread counts.
 
+**Alerting** — Alert rules are defined in Prometheus (PromQL, stored as a ConfigMap) and evaluated every 15 seconds. When JVM heap memory exceeds 80% for more than 5 minutes, Prometheus forwards the alert to AlertManager, which routes it to Slack via webhook. AlertManager handles deduplication and grouping — repeated alerts are not re-sent until the repeat interval (1 hour). All alerting configuration is code, git-managed, and survives redeployment.
+
 ---
 
 ## Things I ran into
@@ -110,6 +113,12 @@ Azure DevOps Pipeline
 
 **Grafana datasource provisioned via ConfigMap is read-only in UI** — cannot edit the URL in the Grafana interface. Must update the ConfigMap and rollout restart the deployment.
 
+**Grafana Workload Identity federated credential subject mismatch** — created the federated credential with subject `monitoring:grafana` but the pod runs under `monitoring:default` (the default service account). CSI driver silently failed to authenticate. Fixed by recreating the federated credential with the correct subject `system:serviceaccount:monitoring:default`.
+
+**Prometheus rule_files glob not matching symlinks** — ConfigMap-mounted files are symlinks (`alerts.yml -> ..data/alerts.yml`). Using an exact path like `/etc/prometheus/rules/alerts.yml` caused Prometheus to silently skip the file. Fixed by using a glob pattern `/etc/prometheus/rules/*.yml`.
+
+**kubectl port-forward connected to old pod after rollout restart** — changes appeared not to take effect even after restarting the deployment. Root cause was the port-forward was still tunnelling to the old pod. Fixed by restarting the port-forward after rollout.
+
 ---
 
 ## Structure
@@ -129,7 +138,8 @@ Azure DevOps Pipeline
 │   ├── frontend/                     # Deployment + Service + HPA
 │   ├── ingress/                      # nginx Ingress with TLS
 │   └── monitoring/
-│       ├── prometheus/               # Deployment + ConfigMap + Service
+│       ├── prometheus/               # Deployment + ConfigMap + Service + AlertRules
+│       ├── alertmanager/             # Deployment + Service + Secret (Slack webhook)
 │       └── grafana/                  # Deployment + ConfigMap + Service + SecretProviderClass
 └── AZURE_DEPLOYMENT.md               # Full deployment walkthrough and troubleshooting
 ```
