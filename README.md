@@ -66,6 +66,7 @@ Azure DevOps Pipeline
 | Monitoring         | Prometheus + Grafana (JVM Micrometer dashboard)         |
 | Alerting           | Prometheus AlertManager + Slack webhook                 |
 | Network Security   | NetworkPolicy (MySQL access restricted to backend only) |
+| Deployment         | Helm chart (templated manifests, values-driven config)  |
 
 ---
 
@@ -91,6 +92,8 @@ Azure DevOps Pipeline
 
 **Alerting** — Alert rules are defined in Prometheus (PromQL, stored as a ConfigMap) and evaluated every 15 seconds. When JVM heap memory exceeds 80% for more than 5 minutes, Prometheus forwards the alert to AlertManager, which routes it to Slack via webhook. AlertManager handles deduplication and grouping — repeated alerts are not re-sent until the repeat interval (1 hour). All alerting configuration is code, git-managed, and survives redeployment.
 
+**Helm** — All Kubernetes manifests are templated as a Helm chart under `helm/`. Variable values (image tags, replica counts, resource limits, ingress host) are centralised in `values.yaml`. The CI/CD pipeline passes the build-specific image tag at deploy time via `--set`, removing the need to modify files on every release. `helm template | kubectl apply --dry-run` is used to validate all manifests before deploying.
+
 ---
 
 ## Things I ran into
@@ -115,7 +118,11 @@ Azure DevOps Pipeline
 
 **Grafana Workload Identity federated credential subject mismatch** — created the federated credential with subject `monitoring:grafana` but the pod runs under `monitoring:default` (the default service account). CSI driver silently failed to authenticate. Fixed by recreating the federated credential with the correct subject `system:serviceaccount:monitoring:default`.
 
+**Prometheus rules subPath mount conflict** — mounting a single rules file using `subPath` into a directory already mounted by another volume (`/etc/prometheus`) caused a `not a directory` error at container init. Fixed by mounting the rules ConfigMap to a separate subdirectory (`/etc/prometheus/rules`) without `subPath`.
+
 **Prometheus rule_files glob not matching symlinks** — ConfigMap-mounted files are symlinks (`alerts.yml -> ..data/alerts.yml`). Using an exact path like `/etc/prometheus/rules/alerts.yml` caused Prometheus to silently skip the file. Fixed by using a glob pattern `/etc/prometheus/rules/*.yml`.
+
+**Insufficient CPU after adding AlertManager** — single-node cluster hit 99% CPU requests with AlertManager added. New Prometheus pod stayed Pending. Fixed by reducing Prometheus CPU requests from 100m to 10m (actual usage is minimal on a low-traffic app).
 
 **kubectl port-forward connected to old pod after rollout restart** — changes appeared not to take effect even after restarting the deployment. Root cause was the port-forward was still tunnelling to the old pod. Fixed by restarting the port-forward after rollout.
 
@@ -141,5 +148,14 @@ Azure DevOps Pipeline
 │       ├── prometheus/               # Deployment + ConfigMap + Service + AlertRules
 │       ├── alertmanager/             # Deployment + Service + Secret (Slack webhook)
 │       └── grafana/                  # Deployment + ConfigMap + Service + SecretProviderClass
+├── helm/                             # Helm chart (templated version of k8s/)
+│   ├── Chart.yaml
+│   ├── values.yaml
+│   └── templates/
+│       ├── namespace.yaml
+│       ├── backend/                  # Deployment + ConfigMap + Service + HPA
+│       ├── frontend/                 # Deployment + Service + HPA
+│       ├── mysql/                    # StatefulSet + Service + NetworkPolicy
+│       └── ingress/
 └── AZURE_DEPLOYMENT.md               # Full deployment walkthrough and troubleshooting
 ```
