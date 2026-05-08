@@ -38,7 +38,7 @@ frontend:
 mysql:
   image: mysql:8.0
   database: expensedb
-  user: expenseuser
+  user: eurowise
 
 ingress:
   host: eurowise.online

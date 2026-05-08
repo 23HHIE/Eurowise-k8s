@@ -126,6 +126,12 @@ Azure DevOps Pipeline
 
 **kubectl port-forward connected to old pod after rollout restart** — changes appeared not to take effect even after restarting the deployment. Root cause was the port-forward was still tunnelling to the old pod. Fixed by restarting the port-forward after rollout.
 
+**Helm cannot import existing resources** — resources created with `kubectl apply` cannot be taken over by Helm directly. Results in `invalid ownership metadata` error. Fixed by deleting the existing resources and reinstalling with Helm.
+
+**Helm upgrade does not restart pods on ConfigMap change** — updating a ConfigMap via `helm upgrade` does not trigger a pod restart automatically. Fixed by running `kubectl rollout restart deployment/<name>` after the upgrade.
+
+**image field with double quotes causes InvalidImageName** — wrapping the image value in quotes (`"{{ .Values.image }}:{{ .Values.tag }}"`) renders the quotes into the image name. Fixed by removing the surrounding quotes from the image field in the template.
+
 ---
 
 ## Structure

@@ -4,8 +4,8 @@ metadata:
   name: backend-config
   namespace: {{ .Values.global.namespace }}
 data:
-  SPRING_DATASOURCE_URL: jdbc:mysql://mysql.{{ .Values.global.namespace }}.svc.cluster.local:3306/expensedb
-  SPRING_DATASOURCE_USERNAME: expenseuser 
+  SPRING_DATASOURCE_URL: jdbc:mysql://mysql.{{ .Values.global.namespace }}.svc.cluster.local:3306/eurowise
+  SPRING_DATASOURCE_USERNAME: eurowise
   SPRING_JPA_HIBERNATE_DDL_AUTO: update
   MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,prometheus
   MANAGEMENT_ENDPOINT_HEALTH_PROBES_ENABLED: "true"
