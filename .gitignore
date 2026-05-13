@@ -16,3 +16,8 @@ Frontend/Expends/expenditure-app/build/
 docs/
 .DS_Sotre
 .DS_Store
+terraform/terraform.tfstate
+terraform/terraform.tfstate.backup
+terraform/.terraform
+k8s/monitoring/alertmanager/secret.yaml
+k8s/monitoring/grafana/secret.yaml

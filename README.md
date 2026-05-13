@@ -67,6 +67,7 @@ Azure DevOps Pipeline
 | Alerting           | Prometheus AlertManager + Slack webhook                 |
 | Network Security   | NetworkPolicy (MySQL access restricted to backend only) |
 | Deployment         | Helm chart (templated manifests, values-driven config)  |
+| Infrastructure     | Terraform (AKS, ACR, Key Vault, Managed Identity as code) |
 
 ---
 
@@ -93,6 +94,8 @@ Azure DevOps Pipeline
 **Alerting** — Alert rules are defined in Prometheus (PromQL, stored as a ConfigMap) and evaluated every 15 seconds. When JVM heap memory exceeds 80% for more than 5 minutes, Prometheus forwards the alert to AlertManager, which routes it to Slack via webhook. AlertManager handles deduplication and grouping — repeated alerts are not re-sent until the repeat interval (1 hour). All alerting configuration is code, git-managed, and survives redeployment.
 
 **Helm** — All Kubernetes manifests are templated as a Helm chart under `helm/`. Variable values (image tags, replica counts, resource limits, ingress host) are centralised in `values.yaml`. The CI/CD pipeline passes the build-specific image tag at deploy time via `--set`, removing the need to modify files on every release. `helm template | kubectl apply --dry-run` is used to validate all manifests before deploying.
+
+**Terraform** — All Azure infrastructure (Resource Group, AKS, ACR, Key Vault, Managed Identity, role assignments) is defined as code under `terraform/`. Running `terraform apply` rebuilds the entire cloud infrastructure from scratch. No manual `az` CLI commands needed. Uses the `azurerm` provider with `features {}` block and `data.azurerm_client_config.current` to get the current subscription and tenant IDs.
 
 ---
 
@@ -132,6 +135,20 @@ Azure DevOps Pipeline
 
 **image field with double quotes causes InvalidImageName** — wrapping the image value in quotes (`"{{ .Values.image }}:{{ .Values.tag }}"`) renders the quotes into the image name. Fixed by removing the surrounding quotes from the image field in the template.
 
+**Terraform `skip_service_principle_add_check` typo** — AKS resource had a misspelled argument. Terraform silently ignored it on `plan` but failed on `apply`. Fixed by correcting to `skip_service_principal_aad_check`.
+
+**Terraform `data.azurerm_client_config.current.object_id` returns wrong ID** — when running Terraform locally with `az login`, `current.object_id` returns the service principal object ID used by the Azure CLI, not the actual user object ID. Key Vault role assignment was created for the wrong principal, causing `403 Forbidden`. Fixed by hardcoding the correct user object ID (`az ad signed-in-user show --query id`) as a variable in `variables.tf`.
+
+**Key Vault `403 Forbidden` after Terraform apply** — role assignments take 2–3 minutes to propagate in Azure AD after creation. Attempting to access Key Vault immediately after `terraform apply` results in a permissions error. Fixed by waiting before running `az keyvault secret set`.
+
+**New AKS cluster gets a new ingress IP** — when the cluster was torn down and rebuilt with Terraform, the nginx ingress controller received a different public IP (20.93.50.74). The old DNS A record pointed to the previous IP. Fixed by updating the Namecheap DNS A record to the new IP and waiting for propagation.
+
+**Monitoring pods Pending after Terraform rebuild** — the rebuilt cluster had CSI driver (DaemonSet) and Workload Identity webhook (2 replicas × 100m) that didn't exist in the original cluster. Combined with the existing pods, the single node hit 1892m/1900m CPU requests, leaving only 8m free — not enough to schedule AlertManager (10m) or Grafana (10m). Fixed by reducing Grafana requests from 100m to 10m and backend requests from 200m to 100m. Low-traffic apps use negligible actual CPU; only the scheduler cares about requests.
+
+**Helm upgrade conflict with kubectl-applied resources** — running `helm upgrade` after using `kubectl patch` to fix CPU requests caused a `conflict with "kubectl-client-side-apply"` error. Helm uses server-side apply and refuses to take ownership of fields originally set by kubectl. Fixed by using `kubectl patch` directly for the specific field, or `helm upgrade --force` to force Helm to take full ownership.
+
+**Grafana dashboard lost after cluster rebuild** — Grafana has no PVC, so all dashboard data lives inside the pod. After a Terraform destroy + apply, the pod is recreated and all manually-imported dashboards are gone. The Prometheus datasource is restored automatically via ConfigMap provisioning, but the JVM Micrometer dashboard (ID 4701) must be re-imported manually each time.
+
 ---
 
 ## Structure
@@ -158,10 +175,12 @@ Azure DevOps Pipeline
 │   ├── Chart.yaml
 │   ├── values.yaml
 │   └── templates/
-│       ├── namespace.yaml
 │       ├── backend/                  # Deployment + ConfigMap + Service + HPA
 │       ├── frontend/                 # Deployment + Service + HPA
 │       ├── mysql/                    # StatefulSet + Service + NetworkPolicy
 │       └── ingress/
+├── terraform/                        # Azure infrastructure as code
+│   ├── main.tf                       # AKS, ACR, Key Vault, Managed Identity, role assignments
+│   └── variables.tf                  # Input variables (resource names, location, VM size)
 └── AZURE_DEPLOYMENT.md               # Full deployment walkthrough and troubleshooting
 ```
